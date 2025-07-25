@@ -1,14 +1,12 @@
-use anchor_client::solana_client::rpc_client::RpcClient;
+
 use anchor_client::solana_sdk::{
-    hash::Hash,
     instruction::Instruction,
     signature::Keypair,
     signer::Signer,
-    system_instruction, system_transaction,
-    transaction::{Transaction, VersionedTransaction},
+    system_instruction,
+    transaction::{Transaction},
 };
 use anyhow::{anyhow, Result};
-use chrono::Utc;
 use colored::Colorize;
 use spl_token::ui_amount_to_amount;
 use std::{env, str::FromStr};
@@ -16,8 +14,6 @@ use std::{sync::Arc, time::Duration};
 
 use tokio::time::Instant;
 
-use crate::common::config::{create_nonblocking_rpc_client, Config};
-// use crate::services::bloxroute::{self, BloxRouteClient};
 use crate::{
     common::logger::Logger,
     services::{
@@ -83,7 +79,7 @@ pub async fn new_signed_and_send(
     recent_blockhash: anchor_client::solana_sdk::hash::Hash,
     keypair: &Keypair,
     mut instructions: Vec<Instruction>,
-    logger: &Logger,
+    _logger: &Logger,
     start_time: Instant,
 ) -> Result<Vec<TxnForm>> {
     // logger.log(
@@ -157,7 +153,7 @@ pub async fn new_signed_and_send_zeroslot(
     recent_blockhash: anchor_client::solana_sdk::hash::Hash,
     keypair: &Keypair,
     mut instructions: Vec<Instruction>,
-    logger: &Logger,
+    _logger: &Logger,
     start_time: Instant,
 ) -> Result<Vec<TxnForm>> {
     let tip_account = zeroslot::get_tip_account()?;
@@ -234,7 +230,7 @@ pub async fn new_signed_and_send_nozomi(
     recent_blockhash: anchor_client::solana_sdk::hash::Hash,
     keypair: &Keypair,
     mut instructions: Vec<Instruction>,
-    logger: &Logger,
+    _logger: &Logger,
     start_time: Instant,
 ) -> Result<Vec<TxnForm>> {
     // logger.log(

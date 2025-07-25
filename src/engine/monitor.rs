@@ -1,6 +1,5 @@
 use anchor_client::solana_sdk::signer::Signer;
 use anchor_client::solana_sdk::{hash::Hash, pubkey::Pubkey, signature::Signature};
-use anchor_lang::pubkey;
 use maplit::hashmap;
 use spl_token::solana_program::native_token::sol_to_lamports;
 use std::collections::HashMap;
@@ -274,7 +273,7 @@ pub async fn pumpswap_trader(
     yellowstone_grpc_http: String,
     yellowstone_grpc_token: String,
     app_state: AppState,
-    swap_config: SwapConfig,
+    _swap_config: SwapConfig,
     _targetlist: Targetlist,
 ) -> Result<(), String> {
     // INITIAL SETTING FOR SUBSCIBE

@@ -1,11 +1,17 @@
 
-use solana_vntr_pumpswap_copytrader::{common::{config::Config, constants::RUN_MSG}, engine::monitor::pumpswap_trader};
+use pumpfun_pumpswap_copytrader::common::{config::Config,config::notify_token_swap, constants::RUN_MSG};
+use pumpfun_pumpswap_copytrader::engine::monitor::pumpswap_trader;
+use std::env;
+use dotenv::dotenv;
+
 
 #[tokio::main]
 async fn main() {
-    /* Initial Settings */
+    dotenv().ok();
+    notify_token_swap();
     let config = Config::new().await;
     let config = config.lock().await;
+       
 
     /* Running Bot */
     let run_msg = RUN_MSG;
@@ -19,5 +25,6 @@ async fn main() {
         config.targetlist.clone(),
     )
     .await;
+
 
 }

