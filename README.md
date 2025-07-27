@@ -38,7 +38,6 @@ cd pumpswap-copy-trading-bot-rust
 
 ```bash
 PRIVATE_KEY=
-PRIVATE_KEY=
 RPC_HTTP=https://mainnet.helius-rpc.com/?api-key=8b9f842c-6823-4b62-b2ff-e2c65c9f1f59
 RPC_WSS=wss://mainnet.helius-rpc.com/?api-key=8b9f842c-6823-4b62-b2ff-e2c65c9f1f59
 YELLOWSTONE_GRPC_HTTP=https://grpc.mainnet.shyft.to
