@@ -54,9 +54,10 @@ JITO_PRIORITY_FEE=0.00015
 #### Add wallet addresses in targetlist.txt file
 
 ```bash
-F16qXwAUXVa34QdRYaaqNeaY2zp9Pd1PzENvVJKEBWpT
-bpDk4nZxqCN7iXtgKYppNcWoK3HZ1w1X5Q2rfoU8EHj
-2pFKWcdekR4togfhzpze6piohorUfUnwr5kYtxTznoSh
+F3agfDYQBWkzU2o4cbdg3jz5kzALxX9Bak36cKvfV1E
+5bo5sG4JaZUsGG4L46YBEengyFrLCm3VBhyj6GuBiBhf
+2EAR5YdNp8RV8jJrELEMdc3buHNrHuRML3VV9oSibcTu
+FGGMq3iA2uk5ZwCpRs6xhFpCZwy9vHDSkoykDxCDGyzV
 ```
 
 ### 4. Run project and enjoy journey
