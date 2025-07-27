@@ -17,7 +17,7 @@ Error free, an optimized, high-performance copy trading bot for the Pump.fun Sol
 
 ## 🖥️ Preview
 
-![Output Screenshot](output.png)
+![Output Screenshot](botoutput.png)
 
 ---
 
