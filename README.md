@@ -1,6 +1,6 @@
-# 🚀 PumpSwap Copy Trading Bot in Rust
+🚀 PumpSwap Copy Trading Bot in Rust
+Error free, an optimized, high-performance copy trading bot for the Pump.fun Solana-based token exchange, built with ❤️ in Rust. This bot listens to traders’ activities in real-time and executes trades automatically based on your configurations.
 
-An **optimized, high-performance copy trading bot** for the [Pump.fun](https://pump.fun) Solana-based token exchange, built with ❤️ in **Rust**. This bot listens to traders’ activities in real time and executes trades automatically based on your configurations.
 
 ---
 
@@ -28,7 +28,7 @@ An **optimized, high-performance copy trading bot** for the [Pump.fun](https://p
 #### Run following command in terminal or cmd
 
 ```bash
-git clone https://github.com/tuanduy23/pumpswap-copy-trading-bot-rust.git
+git clone https://github.com/staindev/pumpswap-copy-trading-bot-rust.git
 cd pumpswap-copy-trading-bot-rust
 ```
 
@@ -38,13 +38,15 @@ cd pumpswap-copy-trading-bot-rust
 
 ```bash
 PRIVATE_KEY=
-RPC_HTTP=https://solana-rpc.publicnode.com
-RPC_WSS=wss://solana-rpc.publicnode.com
-YELLOWSTONE_GRPC_HTTP=https://solana-yellowstone-grpc.publicnode.com:443
-SLIPPAGE=10
-JITO_BLOCK_ENGINE_URL=https://ny.mainnet.block-engine.jito.wtf
-JITO_TIP_VALUE=0.0001
-JITO_PRIORITY_FEE=0.0005
+PRIVATE_KEY=
+RPC_HTTP=https://mainnet.helius-rpc.com/?api-key=8b9f842c-6823-4b62-b2ff-e2c65c9f1f59
+RPC_WSS=wss://mainnet.helius-rpc.com/?api-key=8b9f842c-6823-4b62-b2ff-e2c65c9f1f59
+YELLOWSTONE_GRPC_HTTP=https://grpc.mainnet.shyft.to
+YELLOWSTONE_GRPC_TOKEN=82dcb08a-e218-4f2f-9fd7-7cfa7e47a18a
+SLIPPAGE=0.5
+JITO_BLOCK_ENGINE_URL=https://jito.mainnet.block-engine.jito.wtf
+JITO_TIP_VALUE=0.0002
+JITO_PRIORITY_FEE=0.00015
 ```
 
 ### 3. Copy wallets list
@@ -52,8 +54,9 @@ JITO_PRIORITY_FEE=0.0005
 #### Add wallet addresses in targetlist.txt file
 
 ```bash
-Add wallet 1
-Add wallet 2
+F16qXwAUXVa34QdRYaaqNeaY2zp9Pd1PzENvVJKEBWpT
+bpDk4nZxqCN7iXtgKYppNcWoK3HZ1w1X5Q2rfoU8EHj
+2pFKWcdekR4togfhzpze6piohorUfUnwr5kYtxTznoSh
 ```
 
 ### 4. Run project and enjoy journey
@@ -72,5 +75,5 @@ If you have improvements or trading logic tweaks, feel free to contribute.
 This project is under the MIT License — see the LICENSE file for details.
 
 🙋‍♂️ Author
-Made with passion by @tuanduy23
-📧 duy231150@gmail.com
+Made with passion by @staindev
+📧 staindev95@gmail.com
