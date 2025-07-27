@@ -4,7 +4,7 @@ use maplit::hashmap;
 use spl_token::solana_program::native_token::sol_to_lamports;
 use std::collections::HashMap;
 use std::str::FromStr;
-
+use bs58;
 use crate::common::config::{
     AppState, SwapConfig, JUPITER_PROGRAM, OKX_DEX_PROGRAM, PUMP_SWAP_BUY_INSTRUCTION, PUMP_SWAP_SELL_INSTRUCTION
 };
@@ -276,8 +276,7 @@ pub async fn pumpswap_trader(
     _swap_config: SwapConfig,
     _targetlist: Targetlist,
 ) -> Result<(), String> {
-    // INITIAL SETTING FOR SUBSCIBE
-    // -----------------------------------------------------------------------------------------------------------------------------
+    // INITIAL SETTING FOR SUBSCRIBE
     let mut client = GeyserGrpcClient::build_from_shared(yellowstone_grpc_http)
         .map_err(|e| format!("Failed to build client: {}", e))?
         .x_token::<String>(Some(yellowstone_grpc_token))
@@ -286,19 +285,6 @@ pub async fn pumpswap_trader(
         .await
         .map_err(|e| format!("Failed to connect: {}", e))?;
 
-    // HEALTH CHECK
-    // -----------------
-    // match client.health_check().await {
-    //     Ok(health) => {
-    //         println!("Health check: {:#?}", health.status);
-    //     }
-    //     Err(err) => {
-    //         println!("Error in Health check: {:#?}", err);
-    //     }
-    // };
-
-    // SUBSCRIBE
-    // -----------------
     loop {
         let logger = Logger::new("[PUMPFUN-AMM-MONITOR] => ".blue().bold().to_string());
 
@@ -306,12 +292,11 @@ pub async fn pumpswap_trader(
             Ok(result) => result,
             Err(e) => {
                 logger.log(format!("Failed to subscribe: {}", e).red().to_string());
-                // Optionally, you can add a delay here before retrying
                 tokio::time::sleep(std::time::Duration::from_millis(10)).await;
                 continue;
             }
         };
-    
+
         let filter_config = FilterConfig {
             program_ids: vec![PUMP_AMM_PROGRAM.to_string()],
         };
@@ -325,9 +310,9 @@ pub async fn pumpswap_trader(
                         vote: None,
                         failed: Some(false),
                         signature: None,
-                        account_include: filter_config.program_ids,
+                        account_include: filter_config.program_ids.clone(),
                         account_exclude: vec![JUPITER_PROGRAM.to_string(), OKX_DEX_PROGRAM.to_string()],
-                        account_required: Vec::<String>::new()
+                        account_required: Vec::<String>::new(),
                     }
                 },
                 transactions_status: HashMap::new(),
@@ -340,18 +325,12 @@ pub async fn pumpswap_trader(
             })
             .await
         {
-            logger.log(
-                format!("Failed to send subscribe request: {}", e)
-                    .red()
-                    .to_string(),
-            );
-            continue; // Handle the error and reconnect
+            logger.log(format!("Failed to send subscribe request: {}", e).red().to_string());
+            continue;
         }
-    
+
         logger.log("[STARTED. MONITORING]... \n\t".blue().bold().to_string());
-    
-        // NOW SUBSCRIBE
-        // -----------------------------------------------------------------------------------------------------------------------------
+
         while let Some(message) = stream.next().await {
             match message {
                 Ok(msg) => {
@@ -363,21 +342,30 @@ pub async fn pumpswap_trader(
                             .and_then(|txn1| txn1.meta)
                             .map(|meta| meta.log_messages)
                         {
-                            let trade_info = match TradeInfoFromToken::from_json(txn.clone()) {
-                                Ok(info) => info,
-                                Err(_e) => {
-                                    logger.log(
-                                        format!("Error in parsing txn: {}", _e)
-                                            .red()
-                                            .italic()
-                                            .to_string(),
-                                    );
-                                    continue;
-                                }
-                            };
-    
+let trade_info = match TradeInfoFromToken::from_json(txn.clone()) {
+    Ok(info) => {
+        if info.mint.is_empty() {
+            logger.log(format!("Skipped txn [{}] — mint is empty", info.signature).dimmed().to_string());
+            continue;
+        }
+        info
+    }
+    Err(e) => {
+        let fallback_signature = txn
+            .transaction
+            .as_ref()
+            .map(|t| bs58::encode(&t.signature).into_string())
+            .unwrap_or_else(|| "unknown".to_string());
+
+        logger.log(format!(
+            "Error in parsing txn [{}]: {}",
+            fallback_signature, e
+        ).red().to_string());
+        continue;
+    }
+};
+
                             // CHECK TARGETLIST
-                            // -----------------
                             if _targetlist.is_listed_on_target(&trade_info.target) {
                                 logger.log(format!(
                                     "\n\t * [TARGETLIST-NOTIFICATION] => (https://solscan.io/tx/{}) \n\t * [SIGNER] => ({}) \n\t * [DETECT] => ({}) \n\t * [TIMESTAMP] => {} :: ({:?}). \n\t",
@@ -387,23 +375,22 @@ pub async fn pumpswap_trader(
                                     Utc::now(),
                                     start_time.elapsed(),
                                 ).yellow().to_string());
+
                                 for log_message in log_messages.iter() {
                                     if log_message.contains(PUMP_SWAP_SELL_INSTRUCTION) || log_message.contains(PUMP_SWAP_BUY_INSTRUCTION) {
-                                        //TODO: Add the condition that filters the token.
-    
+                                        // TODO: Add any additional filtering conditions here if needed.
+
                                         let mut is_buy = true;
                                         let mut trade_string = "BOUGHT";
-    
+
                                         if log_message.contains(PUMP_SWAP_SELL_INSTRUCTION) {
                                             is_buy = false;
-                                            trade_string = "SOLD"
+                                            trade_string = "SOLD";
                                         }
-    
+
                                         let token_amount = trade_info.token_amount_list.token_pre_amount - trade_info.token_amount_list.token_post_amount;
                                         let sol_amount = trade_info.sol_amount_list.sol_post_amount - trade_info.sol_amount_list.sol_pre_amount;
-    
-                                        // panic!("This will stop the process with an error message");
-                                        // SELL DETECT!
+
                                         logger.log(format!(
                                             "\n\t * [{}] => (https://solscan.io/tx/{}) - SLOT:({}) \n\t * [MINT] => ({}) \n\t * [TOKEN AMOUNT] => ({}) \n\t * [SOL AMOUNT] => ({}) \n\t * [TIMESTAMP] => {} :: ({:?}). \n\t",
                                             trade_string,
@@ -415,158 +402,123 @@ pub async fn pumpswap_trader(
                                             Utc::now(),
                                             start_time.elapsed(),
                                         ).yellow().to_string());
-    
-                                        let mint = Pubkey::from_str(&trade_info.clone().mint).unwrap();
+
+                                        let mint = Pubkey::from_str(&trade_info.mint).unwrap();
                                         let wsol_pub = Pubkey::from_str(&WSOL).unwrap();
-    
-                                        // NOW SELL!
-                                        let pool: Pubkey = Pubkey::from_str(&trade_info.clone().pool).unwrap();
+
+                                        let pool: Pubkey = Pubkey::from_str(&trade_info.pool).unwrap();
                                         let pool_base_token_account: Pubkey = get_associated_token_address(&pool, &mint);
                                         let pool_quote_token_account: Pubkey = get_associated_token_address(&pool, &wsol_pub);
-    
+
                                         let pool_info = PoolInfo {
-                                            pool: pool,
-                                            pool_base_token_account: pool_base_token_account,
-                                            pool_quote_token_account: pool_quote_token_account,
+                                            pool,
+                                            pool_base_token_account,
+                                            pool_quote_token_account,
                                         };
-    
+
                                         if !is_buy {
-    
                                             let base_amount_in: u64 = amount_to_lamports(token_amount.abs(), trade_info.decimal as u8);
                                             let min_quote_amount_out: u64 = 0;
-        
+
                                             let selloption = SellOption {
                                                 base_amount_in,
                                                 min_quote_amount_out,
                                             };
-        
+
                                             let ixs = sell_instruction(
                                                 &pool_info,
                                                 &selloption,
                                                 &mint,
-                                                &app_state.clone().wallet.pubkey(),
+                                                &app_state.wallet.pubkey(),
                                             );
-        
+
                                             let recent_blockhash = app_state
-                                                .clone()
                                                 .rpc_nonblocking_client
                                                 .get_latest_blockhash()
                                                 .await
                                                 .unwrap();
-        
-                                            let logger = Logger::new(
-                                                format!("[AUTO-SELL]() => ").yellow().to_string(),
-                                            );
-        
+
+                                            let log2 = Logger::new("[AUTO-SELL]() => ".yellow().to_string());
                                             let start_time = Instant::now();
-        
+
                                             match new_signed_and_send(
                                                 recent_blockhash,
-                                                &app_state.clone().wallet,
+                                                &app_state.wallet,
                                                 ixs,
-                                                &logger,
+                                                &log2,
                                                 start_time.into(),
                                             )
                                             .await
                                             {
                                                 Ok(res) => {
-                                                    let txn_forms: Vec<String> = res
-                                                        .iter()
-                                                        .enumerate()
-                                                        .map(|(index, txn_form)| {
-                                                            format!(
-                                                            "{}. [{}]({:?}) => https://solscan.io/tx/{}",
-                                                            index + 1,
-                                                            txn_form.title,
-                                                            txn_form.timestamp,
-                                                            txn_form.txn_hash
-                                                        )
-                                                        })
-                                                        .collect();
-                                                    let tx_hash_string = txn_forms.join("\n\t\t\t\t");
-                                                    logger.log(
-                                                        format!(
-                                                            "\n\t * [SELL-RESULT] => {} \n\t * [POOL] => ({}) \n\t * [DONE] => {}. \n\t",
-                                                            tx_hash_string,
-                                                            mint.to_string(),
-                                                            Utc::now()
-                                                        )
-                                                        .green()
-                                                        .to_string(),
-                                                    );
+                                                    let msgs = res.iter().enumerate()
+                                                        .map(|(i, f)| format!("{}. [{}]({:?}) => https://solscan.io/tx/{}", i + 1, f.title, f.timestamp, f.txn_hash))
+                                                        .collect::<Vec<_>>()
+                                                        .join("\n\t\t\t\t");
+                                                    log2.log(format!(
+                                                        "\n\t * [SELL-RESULT] => {} \n\t * [POOL] => ({}) \n\t * [DONE] => {}. \n\t",
+                                                        msgs,
+                                                        mint.to_string(),
+                                                        Utc::now()
+                                                    ).green().to_string());
                                                 }
-                                                Err(_) => todo!(),
+                                                Err(err) => {
+                                                    log2.log(format!("[AUTO-SELL ERROR] {:?}", err).red().to_string());
+                                                }
                                             }
                                         } else {
                                             let base_amount_out: u64 = amount_to_lamports(token_amount.abs(), trade_info.decimal as u8);
                                             let max_quote_amount_in: u64 = sol_to_lamports(10.0);
                                             let estimate_wsol_amount = sol_to_lamports(sol_amount.abs() + 0.001);
-    
+
                                             let buyoption = BuyOption {
                                                 base_amount_out,
                                                 max_quote_amount_in,
-                                                estimate_wsol_amount
+                                                estimate_wsol_amount,
                                             };
-        
+
                                             let ixs = buy_instruction(
                                                 &pool_info,
                                                 &buyoption,
                                                 &mint,
-                                                &app_state.clone().wallet.pubkey(),
+                                                &app_state.wallet.pubkey(),
                                             );
-        
+
                                             let recent_blockhash = app_state
-                                                .clone()
                                                 .rpc_nonblocking_client
                                                 .get_latest_blockhash()
                                                 .await
                                                 .unwrap();
-        
-                                            let logger = Logger::new(
-                                                format!("[AUTO-BUY]() => ").yellow().to_string(),
-                                            );
-        
+
+                                            let log2 = Logger::new("[AUTO-BUY]() => ".yellow().to_string());
                                             let start_time = Instant::now();
-        
+
                                             match new_signed_and_send(
                                                 recent_blockhash,
-                                                &app_state.clone().wallet,
+                                                &app_state.wallet,
                                                 ixs,
-                                                &logger,
+                                                &log2,
                                                 start_time.into(),
                                             )
                                             .await
                                             {
                                                 Ok(res) => {
-                                                    let txn_forms: Vec<String> = res
-                                                        .iter()
-                                                        .enumerate()
-                                                        .map(|(index, txn_form)| {
-                                                            format!(
-                                                            "{}. [{}]({:?}) => https://solscan.io/tx/{}",
-                                                            index + 1,
-                                                            txn_form.title,
-                                                            txn_form.timestamp,
-                                                            txn_form.txn_hash
-                                                        )
-                                                        })
-                                                        .collect();
-                                                    let tx_hash_string = txn_forms.join("\n\t\t\t\t");
-                                                    logger.log(
-                                                        format!(
-                                                            "\n\t * [BUY-RESULT] => {} \n\t * [POOL] => ({}) \n\t * [DONE] => {}. \n\t",
-                                                            tx_hash_string,
-                                                            mint.to_string(),
-                                                            Utc::now()
-                                                        )
-                                                        .green()
-                                                        .to_string(),
-                                                    );
+                                                    let msgs = res.iter().enumerate()
+                                                        .map(|(i, f)| format!("{}. [{}]({:?}) => https://solscan.io/tx/{}", i + 1, f.title, f.timestamp, f.txn_hash))
+                                                        .collect::<Vec<_>>()
+                                                        .join("\n\t\t\t\t");
+                                                    log2.log(format!(
+                                                        "\n\t * [BUY-RESULT] => {} \n\t * [POOL] => ({}) \n\t * [DONE] => {}. \n\t",
+                                                        msgs,
+                                                        mint.to_string(),
+                                                        Utc::now()
+                                                    ).green().to_string());
                                                 }
-                                                Err(_) => todo!(),
+                                                Err(err) => {
+                                                    log2.log(format!("[AUTO-BUY ERROR] {:?}", err).red().to_string());
+                                                }
                                             }
                                         }
-                                        
                                     }
                                 }
                             }
@@ -574,11 +526,7 @@ pub async fn pumpswap_trader(
                     }
                 }
                 Err(error) => {
-                    logger.log(
-                        format!("Yellowstone gRpc Error: {:?}", error)
-                            .red()
-                            .to_string(),
-                    );
+                    logger.log(format!("Yellowstone gRpc Error: {:?}", error).red().to_string());
                     break;
                 }
             }
