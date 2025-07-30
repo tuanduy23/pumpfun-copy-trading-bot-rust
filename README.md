@@ -4,7 +4,7 @@ Error free, an optimized, high-performance copy trading bot for the Pump.fun Sol
  
 --- 
 
-## 📦 Features
+## 📦 Features 
 
 - ⚡ Real-time copy trading via WebSocket
 - 🧠 Automated decision-making logic
@@ -74,6 +74,7 @@ If you have improvements or trading logic tweaks, feel free to contribute.
 📜 License
 This project is under the MIT License — see the LICENSE file for details.
 
-🙋‍♂️ Author
+🙋‍♂️ Author 
 Made with passion by @staindev
+
 📧 staindev95@gmail.com
