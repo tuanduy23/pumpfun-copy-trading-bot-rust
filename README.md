@@ -7,7 +7,7 @@ Error free, an optimized, high-performance copy trading bot for the Pump.fun Sol
 ## 📦 Features  
 
 - ⚡ Real-time copy trading via WebSocket
-- 🧠 Automated decision-making logic
+- 🧠 Automated decision-making logic 
 - 🔐 Secure key handling
 - 🪙 Trade with Jito tips to maximize speed
 - 🛠️ Fully customizable trader list and logic
