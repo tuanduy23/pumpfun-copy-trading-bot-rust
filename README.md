@@ -15,11 +15,11 @@ Error free, an optimized, high-performance copy trading bot for the Pump.fun Sol
  
 ---
 
-## 🖥️ Preview
+## 🖥️ Preview 
 
 ![Output Screenshot](botoutput.png)
 
----
+
 
 ## 🔧 Setup Instructions
 
@@ -29,7 +29,8 @@ Error free, an optimized, high-performance copy trading bot for the Pump.fun Sol
 
 ```bash
 git clone https://github.com/staindev/pumpswap-copy-trading-bot-rust.git
-cd pumpswap-copy-trading-bot-rust
+cd pumpswap-copy-trading-b
+ot-rust
 ```
 
 ### 2. Configure .env
